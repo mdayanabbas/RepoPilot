@@ -1,0 +1,11 @@
+*.pyc
+__pycache__/
+.env
+.venv/
+venv/
+storage/workspaces/*
+storage/traces/*
+storage/logs/*
+!storage/workspaces/.gitkeep
+!storage/traces/.gitkeep
+!storage/logs/.gitkeep

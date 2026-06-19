@@ -1,0 +1,5 @@
+[project]
+name = "repopilot"
+version = "0.1.0"
+description = "Local-First AI Debugging Agent for Backend Repositories"
+requires-python = ">=3.11"
