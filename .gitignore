@@ -3,7 +3,7 @@ __pycache__/
 .env
 .venv/
 venv/
-./tmp
+.tmp/
 storage/workspaces/*
 storage/traces/*
 storage/logs/*
