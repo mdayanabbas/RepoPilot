@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from backend.app.schemas.framework import SupportedFramework
+
 
 class ImportInfo(BaseModel):
     module: str
@@ -36,4 +38,19 @@ class IntelligenceErrorEntry(BaseModel):
 
 class SymbolIndex(BaseModel):
     files: list[PythonFileSymbols] = Field(default_factory=list)
+    errors: list[IntelligenceErrorEntry] = Field(default_factory=list)
+
+
+class RouteInfo(BaseModel):
+    framework: SupportedFramework
+    path: str
+    method: str
+    handler_name: str
+    file_path: str
+    line_number: int = Field(ge=1)
+    router_name: str | None = None
+
+
+class RouteIndex(BaseModel):
+    routes: list[RouteInfo] = Field(default_factory=list)
     errors: list[IntelligenceErrorEntry] = Field(default_factory=list)
