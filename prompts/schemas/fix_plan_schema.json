@@ -1,4 +1,148 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object"
+  "$defs": {
+    "FileToChange": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "title": "File Path",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Risk",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_path",
+        "reason",
+        "risk"
+      ],
+      "title": "FileToChange",
+      "type": "object"
+    },
+    "FixPlanStep": {
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "title": "Step",
+          "type": "integer"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "target_file": {
+          "title": "Target File",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step",
+        "description",
+        "target_file"
+      ],
+      "title": "FixPlanStep",
+      "type": "object"
+    },
+    "ValidationPlanItem": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "title": "Command",
+          "type": "string"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command",
+        "purpose"
+      ],
+      "title": "ValidationPlanItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "suspected_issue": {
+      "title": "Suspected Issue",
+      "type": "string"
+    },
+    "root_cause": {
+      "title": "Root Cause",
+      "type": "string"
+    },
+    "files_to_change": {
+      "items": {
+        "$ref": "#/$defs/FileToChange"
+      },
+      "title": "Files To Change",
+      "type": "array"
+    },
+    "fix_plan": {
+      "items": {
+        "$ref": "#/$defs/FixPlanStep"
+      },
+      "title": "Fix Plan",
+      "type": "array"
+    },
+    "validation_plan": {
+      "items": {
+        "$ref": "#/$defs/ValidationPlanItem"
+      },
+      "title": "Validation Plan",
+      "type": "array"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "risk_level": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Risk Level",
+      "type": "string"
+    },
+    "requires_human_review": {
+      "title": "Requires Human Review",
+      "type": "boolean"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suspected_issue",
+    "root_cause",
+    "files_to_change",
+    "fix_plan",
+    "validation_plan",
+    "confidence",
+    "risk_level",
+    "requires_human_review",
+    "assumptions"
+  ],
+  "title": "FixPlan",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
