@@ -1,3 +1,5 @@
+from typing import Any
+
 from backend.app.agent.provider_factory import ProviderFactory
 from backend.app.agent.router import LLMRouter
 from backend.app.schemas.llm import LLMRouterResponse
@@ -17,6 +19,6 @@ class LLMService:
     async def generate_json(
         self,
         prompt: str,
-        response_schema: dict | None = None,
+        response_schema: dict[str, Any] | None = None,
     ) -> LLMRouterResponse:
         return await self.router.generate_json(prompt, response_schema)
