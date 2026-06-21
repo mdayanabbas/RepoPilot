@@ -8,6 +8,7 @@ from backend.app.scanner.ignore_rules import is_ignored_directory, is_ignored_fi
 from backend.app.schemas.retrieval import (
     ContextBuildInput,
     FileContext,
+    RelevantFile,
     StructuredContext,
 )
 from backend.app.settings import Settings
@@ -26,10 +27,12 @@ class ContextBuilder:
             context_input.max_context_chars or self.settings.MAX_CONTEXT_CHARS
         )
         budget = CharacterBudget(max_file_chars, max_context_chars)
-        selected_paths = _unique_paths(context_input)
-
+        selected_files = _normalize_selected_files(context_input, workspace)
+        selected_paths = list(
+            dict.fromkeys(file.file_path for file in selected_files)
+        )
         resolved_paths = {
-            relative_path: _resolve_selected_path(workspace, relative_path)
+            relative_path: workspace.joinpath(*PurePosixPath(relative_path).parts)
             for relative_path in selected_paths
         }
         file_contexts = [
@@ -43,7 +46,7 @@ class ContextBuilder:
         return StructuredContext(
             issue=context_input.issue_text,
             framework=context_input.framework,
-            selected_files=context_input.selected_files,
+            selected_files=selected_files,
             relevant_routes=[
                 route
                 for route in context_input.route_index.routes
@@ -94,18 +97,30 @@ def build_context(
     return ContextBuilder(settings).build(context_input)
 
 
-def _unique_paths(context_input: ContextBuildInput) -> list[str]:
-    return list(dict.fromkeys(file.file_path for file in context_input.selected_files))
+def _normalize_selected_files(
+    context_input: ContextBuildInput,
+    workspace: Path,
+) -> list[RelevantFile]:
+    normalized: list[RelevantFile] = []
+    for selected_file in context_input.selected_files:
+        safe_path = _resolve_selected_path(workspace, selected_file.file_path)
+        normalized.append(
+            selected_file.model_copy(update={"file_path": safe_path})
+        )
+    return normalized
 
 
-def _resolve_selected_path(workspace: Path, relative_path: str) -> Path:
-    candidate = workspace / relative_path
-    if Path(relative_path).is_absolute() or not is_path_within(workspace, candidate):
+def _resolve_selected_path(workspace: Path, relative_path: str) -> str:
+    # Retrieval/scanner paths are POSIX-style, but callers on Windows may supply
+    # backslashes. Normalize both forms before applying ignore and traversal rules.
+    requested = Path(relative_path.replace("\\", "/"))
+    candidate = (workspace / requested).resolve()
+    if requested.is_absolute() or not is_path_within(workspace, candidate):
         raise RetrievalError(
             "Selected file is outside the workspace",
             details={"path": relative_path},
         )
-    return candidate.resolve()
+    return candidate.relative_to(workspace).as_posix()
 
 
 def _read_text(path: Path, char_limit: int) -> tuple[str, bool]:

@@ -7,6 +7,12 @@ class CharacterBudget:
     max_context_chars: int
     used_chars: int = 0
 
+    def __post_init__(self) -> None:
+        if self.max_file_chars < 1 or self.max_context_chars < 1:
+            raise ValueError("Character limits must be positive")
+        if self.used_chars < 0 or self.used_chars > self.max_context_chars:
+            raise ValueError("Used characters must be within the total budget")
+
     @property
     def remaining_chars(self) -> int:
         return max(self.max_context_chars - self.used_chars, 0)
