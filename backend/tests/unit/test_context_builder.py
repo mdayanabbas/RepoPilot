@@ -38,6 +38,16 @@ def test_context_reads_only_selected_files(tmp_path: Path) -> None:
     assert "not_selected" not in result.file_contexts[0].content
 
 
+def test_file_content_is_read_without_changes(tmp_path: Path) -> None:
+    content = "from fastapi import FastAPI\n\napp = FastAPI()\n"
+    (tmp_path / "main.py").write_text(content, encoding="utf-8")
+
+    result = ContextBuilder().build(_input(tmp_path, ["main.py"]))
+
+    assert result.file_contexts[0].content == content
+    assert result.file_contexts[0].truncated is False
+
+
 def test_per_file_truncation(tmp_path: Path) -> None:
     (tmp_path / "large.py").write_text("abcdefghij", encoding="utf-8")
 
@@ -95,3 +105,15 @@ def test_binary_and_ignored_files_are_not_included(tmp_path: Path) -> None:
     assert [file.content for file in result.file_contexts] == ["", ""]
     assert result.file_contexts[0].error == "Binary or unreadable file"
     assert result.file_contexts[1].error == "Ignored file"
+
+
+def test_windows_style_ignored_path_is_not_read(tmp_path: Path) -> None:
+    ignored = tmp_path / ".venv"
+    ignored.mkdir()
+    (ignored / "hidden.py").write_text("secret = True", encoding="utf-8")
+
+    result = ContextBuilder().build(_input(tmp_path, [r".venv\hidden.py"]))
+
+    assert result.selected_files[0].file_path == ".venv/hidden.py"
+    assert result.file_contexts[0].content == ""
+    assert result.file_contexts[0].error == "Ignored file"
