@@ -12,6 +12,7 @@ from backend.app.settings import Settings
 GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_TIMEOUT_SECONDS = 30.0
 JSON_SYSTEM_MESSAGE = "Return valid JSON only."
+MAX_ERROR_TEXT_CHARS = 800
 
 
 class GroqProvider(BaseLLMProvider):
@@ -59,11 +60,15 @@ class GroqProvider(BaseLLMProvider):
 
         latency_ms = max((perf_counter() - started_at) * 1000, 0.0)
         if response.status_code != httpx.codes.OK:
+            response_text = _truncate(response.text)
             raise LLMProviderError(
-                "Groq returned a non-success response",
+                (
+                    "Groq returned a non-success response "
+                    f"(status_code={response.status_code}, body={response_text})"
+                ),
                 details={
                     "status_code": response.status_code,
-                    "response_body": response.text,
+                    "response_body": response_text,
                 },
             )
 
@@ -124,7 +129,10 @@ def _decode_response(response: httpx.Response) -> dict[str, Any]:
     try:
         decoded = response.json()
     except ValueError as exc:
-        raise LLMProviderError("Groq returned a malformed response") from exc
+        raise LLMProviderError(
+            "Groq returned a malformed JSON response",
+            details={"response_body": _truncate(response.text)},
+        ) from exc
     if not isinstance(decoded, dict):
         raise LLMProviderError("Groq returned a malformed response")
     return decoded
@@ -142,9 +150,15 @@ def _extract_response(
             total_tokens=raw_usage.get("total_tokens", 0),
         )
     except (IndexError, KeyError, TypeError, AttributeError, ValueError) as exc:
-        raise LLMProviderError("Groq returned a malformed response") from exc
+        raise LLMProviderError(
+            "Groq returned a malformed response",
+            details={"response": _truncate(json.dumps(raw_response, default=str))},
+        ) from exc
     if not isinstance(content, str):
-        raise LLMProviderError("Groq returned a malformed response")
+        raise LLMProviderError(
+            "Groq returned a malformed response",
+            details={"content_type": type(content).__name__},
+        )
     return content, usage
 
 
@@ -152,7 +166,22 @@ def _decode_content(content: str) -> dict[str, Any]:
     try:
         decoded = json.loads(content)
     except json.JSONDecodeError as exc:
-        raise LLMProviderError("Groq returned invalid JSON content") from exc
+        truncated_content = _truncate(content)
+        raise LLMProviderError(
+            f"Groq returned invalid JSON content: {truncated_content}",
+            details={"raw_content": truncated_content},
+        ) from exc
     if not isinstance(decoded, dict):
-        raise LLMProviderError("Groq returned invalid JSON content")
+        truncated_content = _truncate(content)
+        raise LLMProviderError(
+            f"Groq returned JSON content that is not an object: {truncated_content}",
+            details={"raw_content": truncated_content},
+        )
     return decoded
+
+
+def _truncate(value: str, limit: int = MAX_ERROR_TEXT_CHARS) -> str:
+    normalized = value.replace("\r", "\\r").replace("\n", "\\n")
+    if len(normalized) <= limit:
+        return normalized
+    return f"{normalized[:limit]}..."

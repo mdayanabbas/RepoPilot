@@ -25,6 +25,7 @@ class AnalysisContextSummary(BaseModel):
 
 
 class AnalyzeRepositoryResult(BaseModel):
+    run_id: str
     repository: RepositoryMetadata
     scan: ScanResult
     framework: FrameworkDetectionResult
@@ -35,6 +36,7 @@ class AnalyzeRepositoryResult(BaseModel):
 
 
 class AnalyzeRepositoryResponse(BaseModel):
+    run_id: str
     repository: RepositoryMetadataResponse
     scan: ScanResult
     framework: FrameworkDetectionResult

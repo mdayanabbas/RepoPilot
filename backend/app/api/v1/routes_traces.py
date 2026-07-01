@@ -1,14 +1,11 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+
+from backend.app.schemas.trace import TraceSummary
+from backend.app.tracing.service import get_trace_service
 
 router = APIRouter(prefix="/traces", tags=["Traces"])
 
 
-class TraceEventsResponse(BaseModel):
-    run_id: str
-    events: list[dict[str, object]] = Field(default_factory=list)
-
-
-@router.get("/{run_id}", response_model=TraceEventsResponse)
-def get_trace_events(run_id: str) -> TraceEventsResponse:
-    return TraceEventsResponse(run_id=run_id, events=[])
+@router.get("/{run_id}", response_model=TraceSummary)
+def get_trace_events(run_id: str) -> TraceSummary:
+    return get_trace_service().get_trace(run_id)

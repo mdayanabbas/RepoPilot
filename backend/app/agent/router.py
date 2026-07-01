@@ -42,8 +42,12 @@ class LLMRouter:
                 attempts=attempts,
             )
 
+        failure_summary = "; ".join(
+            f"{attempt.provider}: {attempt.error or 'unknown error'}"
+            for attempt in attempts
+        )
         raise LLMProviderError(
-            "All LLM providers failed",
+            f"All LLM providers failed: {failure_summary}",
             details={
                 "attempts": [attempt.model_dump() for attempt in attempts],
             },
@@ -60,13 +64,14 @@ class LLMRouter:
         try:
             response = await provider.generate_json(prompt, response_schema)
         except LLMProviderError as exc:
+            error_message = _format_provider_error(exc)
             attempts.append(
                 LLMProviderAttempt(
                     provider=provider.provider_name,
                     model=provider.model_name,
                     success=False,
                     latency_ms=_elapsed_ms(started_at),
-                    error=str(exc),
+                    error=error_message,
                 )
             )
             raise
@@ -84,3 +89,9 @@ class LLMRouter:
 
 def _elapsed_ms(started_at: float) -> float:
     return max((perf_counter() - started_at) * 1000, 0.0)
+
+
+def _format_provider_error(error: LLMProviderError) -> str:
+    if not error.details:
+        return str(error)
+    return f"{error} details={error.details}"

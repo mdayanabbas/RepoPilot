@@ -24,6 +24,7 @@ async def run_analysis(
     )
     result = await workflow.run(request)
     return AnalyzeRepositoryResponse(
+        run_id=result.run_id,
         repository=to_repository_metadata_response(result.repository),
         scan=result.scan,
         framework=result.framework,
