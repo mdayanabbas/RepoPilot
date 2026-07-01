@@ -24,6 +24,7 @@ from backend.app.schemas.analysis import (
     PersistedFixPlan,
     PersistedRetrievalResult,
 )
+from backend.app.schemas.architecture import ArchitecturePersistenceUnavailableResponse
 from backend.app.schemas.repository import (
     RepositoryRecordResponse,
     to_repository_metadata_response,
@@ -68,6 +69,20 @@ async def run_analysis(
         retrieval=result.retrieval,
         context_summary=result.context_summary,
         fix_plan=result.fix_plan,
+    )
+
+
+@router.get(
+    "/{analysis_run_id}/architecture",
+    response_model=ArchitecturePersistenceUnavailableResponse,
+    status_code=501,
+)
+def get_analysis_architecture(
+    analysis_run_id: str,
+) -> ArchitecturePersistenceUnavailableResponse:
+    del analysis_run_id
+    return ArchitecturePersistenceUnavailableResponse(
+        message="Architecture graph persistence is not available yet."
     )
 
 
