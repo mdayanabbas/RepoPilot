@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 
+from backend.app.agent.response_parser import parse_json_object_content
 from backend.app.agent.providers.base import BaseLLMProvider
 from backend.app.core.errors import LLMProviderError
 from backend.app.schemas.llm import LLMResponse, LLMUsage
@@ -138,10 +139,4 @@ def _extract_response(
 
 
 def _decode_content(content: str) -> dict[str, Any]:
-    try:
-        decoded = json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise LLMProviderError("LM Studio returned invalid JSON content") from exc
-    if not isinstance(decoded, dict):
-        raise LLMProviderError("LM Studio returned invalid JSON content")
-    return decoded
+    return parse_json_object_content(content, "LM Studio")

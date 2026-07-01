@@ -26,6 +26,7 @@ class AnalysisContextSummary(BaseModel):
 
 class AnalyzeRepositoryResult(BaseModel):
     run_id: str
+    analysis_run_id: str | None = None
     repository: RepositoryMetadata
     scan: ScanResult
     framework: FrameworkDetectionResult
@@ -37,6 +38,7 @@ class AnalyzeRepositoryResult(BaseModel):
 
 class AnalyzeRepositoryResponse(BaseModel):
     run_id: str
+    analysis_run_id: str | None = None
     repository: RepositoryMetadataResponse
     scan: ScanResult
     framework: FrameworkDetectionResult
@@ -44,3 +46,12 @@ class AnalyzeRepositoryResponse(BaseModel):
     retrieval: RetrievalResult
     context_summary: AnalysisContextSummary
     fix_plan: FixPlan | None = None
+
+
+class AnalysisRunResponse(BaseModel):
+    analysis_run_id: str
+    repository_id: str
+    issue_text: str
+    status: str
+    detected_framework: str | None = None
+    error_message: str | None = None

@@ -27,14 +27,32 @@ def log_step(
             metadata=metadata,
             error_message=str(exc),
         )
+        trace_service.log_tool_call(
+            context,
+            step_name=step_name,
+            tool_name=step_name,
+            status="failed",
+            duration_ms=_elapsed_ms(started_at),
+            input_metadata=metadata,
+            error_message=str(exc),
+        )
         raise
 
+    duration_ms = _elapsed_ms(started_at)
     trace_service.log_event(
         context,
         step_name=step_name,
         status="success",
-        duration_ms=_elapsed_ms(started_at),
+        duration_ms=duration_ms,
         metadata=metadata,
+    )
+    trace_service.log_tool_call(
+        context,
+        step_name=step_name,
+        tool_name=step_name,
+        status="success",
+        duration_ms=duration_ms,
+        input_metadata=metadata,
     )
     return result
 
