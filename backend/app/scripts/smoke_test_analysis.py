@@ -37,9 +37,10 @@ async def main() -> None:
     except LLMProviderError as exc:
         _print_provider_error(exc)
         return
-    trace = get_trace_service().get_trace(result.run_id)
+    trace = get_trace_service().get_trace(result.trace_run_id)
 
-    print(f"run_id: {result.run_id}")
+    print(f"analysis_run_id: {result.analysis_run_id or ''}")
+    print(f"trace_run_id: {result.trace_run_id}")
     print(f"framework: {result.framework.framework.value}")
     print("selected_files:")
     for file in result.retrieval.files:

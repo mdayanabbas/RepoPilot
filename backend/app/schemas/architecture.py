@@ -79,5 +79,9 @@ class ArchitectureBuildResponse(BaseModel):
     summary: ArchitectureSummary
 
 
-class ArchitecturePersistenceUnavailableResponse(BaseModel):
-    message: str
+class PersistedArchitectureResponse(BaseModel):
+    analysis_run_id: str
+    framework: str
+    graph: ArchitectureGraph | None = None
+    mermaid: str | None = None
+    summary: ArchitectureSummary

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.database.models import (
     AnalysisRunRecord,
+    ArchitectureGraphRecord,
     FixPlanRecord,
     ModelCallRecord,
     RepositoryRecord,
@@ -13,6 +14,7 @@ from backend.app.database.models import (
     ToolCallRecord,
 )
 from backend.app.database.models import utc_now
+from backend.app.schemas.architecture import ArchitectureGraph
 from backend.app.schemas.fix_plan import FixPlan
 from backend.app.schemas.retrieval import RetrievalResult
 
@@ -172,6 +174,17 @@ def get_retrieval_results_for_analysis(
     )
 
 
+def get_architecture_graph_for_analysis(
+    db: Session,
+    analysis_run_id: str,
+) -> ArchitectureGraphRecord | None:
+    return db.scalar(
+        select(ArchitectureGraphRecord)
+        .where(ArchitectureGraphRecord.analysis_run_id == analysis_run_id)
+        .order_by(ArchitectureGraphRecord.created_at.desc())
+    )
+
+
 def create_retrieval_result_records(
     db: Session,
     *,
@@ -192,6 +205,27 @@ def create_retrieval_result_records(
     for record in records:
         db.refresh(record)
     return records
+
+
+def create_architecture_graph_record(
+    db: Session,
+    *,
+    analysis_run_id: str,
+    framework: str,
+    graph: ArchitectureGraph,
+    mermaid: str,
+) -> ArchitectureGraphRecord:
+    record = ArchitectureGraphRecord(
+        analysis_run_id=analysis_run_id,
+        framework=framework,
+        graph_json=graph.model_dump(mode="json"),
+        mermaid=mermaid,
+        summary_json=graph.summary.model_dump(mode="json"),
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
 
 
 def create_fix_plan_record(

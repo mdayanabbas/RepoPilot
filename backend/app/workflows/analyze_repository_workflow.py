@@ -3,9 +3,11 @@ from time import perf_counter
 from sqlalchemy.orm import Session
 
 from backend.app.agent.service import LLMService
+from backend.app.architecture.service import ArchitectureService
 from backend.app.database.models import AnalysisRunRecord, RepositoryRecord
 from backend.app.database.repositories import (
     create_analysis_run_record,
+    create_architecture_graph_record,
     create_fix_plan_record,
     create_repository_record,
     create_retrieval_result_records,
@@ -24,9 +26,10 @@ from backend.app.schemas.analysis import (
     AnalyzeRepositoryRequest,
     AnalyzeRepositoryResult,
 )
+from backend.app.schemas.architecture import ArchitectureGraph
 from backend.app.schemas.fix_plan import FixPlan
 from backend.app.schemas.framework import SupportedFramework
-from backend.app.schemas.intelligence import RouteIndex
+from backend.app.schemas.intelligence import RouteIndex, SymbolIndex
 from backend.app.schemas.repository import LoadRepositoryRequest, RepositoryMetadata
 from backend.app.schemas.retrieval import (
     ContextBuildInput,
@@ -36,6 +39,7 @@ from backend.app.schemas.retrieval import (
 from backend.app.schemas.scan import ScanResult
 from backend.app.settings import Settings
 from backend.app.tracing.event_logger import log_skipped_step, log_step
+from backend.app.tracing.trace_context import TraceContext
 from backend.app.tracing.service import TraceService, get_trace_service
 from backend.app.workflows.generate_fix_plan_workflow import (
     GenerateFixPlanWorkflow,
@@ -54,6 +58,7 @@ class AnalyzeRepositoryWorkflow:
         route_indexer: RouteIndexer | None = None,
         retrieval_service: RetrievalService | None = None,
         context_builder: ContextBuilder | None = None,
+        architecture_service: ArchitectureService | None = None,
         fix_plan_workflow: GenerateFixPlanWorkflow | None = None,
         trace_service: TraceService | None = None,
         db: Session | None = None,
@@ -69,6 +74,7 @@ class AnalyzeRepositoryWorkflow:
         self.route_indexer = route_indexer or RouteIndexer()
         self.retrieval_service = retrieval_service or RetrievalService()
         self.context_builder = context_builder or ContextBuilder(settings)
+        self.architecture_service = architecture_service or ArchitectureService()
 
         if fix_plan_workflow is not None:
             self.fix_plan_workflow = fix_plan_workflow
@@ -161,6 +167,14 @@ class AnalyzeRepositoryWorkflow:
                 ),
                 metadata={"framework": framework.framework.value},
             )
+            self._build_and_persist_architecture_graph(
+                trace_context=trace_context,
+                analysis_run_id=analysis_run.id if analysis_run else None,
+                framework=framework.framework.value,
+                scan=scan,
+                symbol_index=symbol_index,
+                route_index=extracted_routes,
+            )
             retrieval = log_step(
                 self.trace_service,
                 trace_context,
@@ -244,6 +258,7 @@ class AnalyzeRepositoryWorkflow:
 
         return AnalyzeRepositoryResult(
             run_id=trace_context.run_id,
+            trace_run_id=trace_context.run_id,
             analysis_run_id=analysis_run.id if analysis_run else None,
             repository=repository,
             scan=scan,
@@ -330,6 +345,69 @@ class AnalyzeRepositoryWorkflow:
             self.db,
             analysis_run_id=analysis_run_id,
             fix_plan=fix_plan,
+        )
+
+    def _build_and_persist_architecture_graph(
+        self,
+        *,
+        trace_context: TraceContext,
+        analysis_run_id: str | None,
+        framework: str,
+        scan: ScanResult,
+        symbol_index: SymbolIndex,
+        route_index: RouteIndex,
+    ) -> None:
+        started_at = perf_counter()
+        try:
+            graph = self.architecture_service.build_graph(
+                scan_result=scan,
+                symbol_index=symbol_index,
+                route_index=route_index,
+            )
+            mermaid = self.architecture_service.export_mermaid(graph)
+            self._persist_architecture_graph(
+                analysis_run_id=analysis_run_id,
+                framework=framework,
+                graph=graph,
+                mermaid=mermaid,
+            )
+        except Exception as exc:
+            if self.db is not None:
+                self.db.rollback()
+            self.trace_service.log_event(
+                trace_context,
+                step_name="build_architecture_graph",
+                status="failed",
+                duration_ms=_elapsed_ms(started_at),
+                metadata={"framework": framework},
+                error_message=str(exc),
+            )
+            return
+
+        self.trace_service.log_event(
+            trace_context,
+            step_name="build_architecture_graph",
+            status="success",
+            duration_ms=_elapsed_ms(started_at),
+            metadata={"framework": framework},
+        )
+
+    def _persist_architecture_graph(
+        self,
+        *,
+        analysis_run_id: str | None,
+        framework: str,
+        graph: ArchitectureGraph,
+        mermaid: str,
+    ) -> None:
+        if self.db is None or analysis_run_id is None:
+            return
+        create_architecture_graph_record(
+            self.db,
+            analysis_run_id=analysis_run_id,
+            framework=framework,
+            graph=graph,
+            mermaid=mermaid,
         )
 
 

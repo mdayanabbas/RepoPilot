@@ -73,6 +73,10 @@ class AnalysisRunRecord(Base):
         back_populates="analysis_run",
         cascade="all, delete-orphan",
     )
+    architecture_graphs: Mapped[list["ArchitectureGraphRecord"]] = relationship(
+        back_populates="analysis_run",
+        cascade="all, delete-orphan",
+    )
 
 
 class ScanResultRecord(Base):
@@ -152,6 +156,27 @@ class FixPlanRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     analysis_run: Mapped[AnalysisRunRecord] = relationship(back_populates="fix_plans")
+
+
+class ArchitectureGraphRecord(Base):
+    __tablename__ = "architecture_graphs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    analysis_run_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("analysis_runs.id"),
+        nullable=False,
+        index=True,
+    )
+    framework: Mapped[str] = mapped_column(String(50), nullable=False)
+    graph_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    mermaid: Mapped[str] = mapped_column(Text, nullable=False)
+    summary_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    analysis_run: Mapped[AnalysisRunRecord] = relationship(
+        back_populates="architecture_graphs"
+    )
 
 
 class TraceEventRecord(Base):

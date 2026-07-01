@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi import Query
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from backend.app.database.models import (
     RetrievalResultRecord,
 )
 from backend.app.database.repositories import (
+    get_architecture_graph_for_analysis,
     get_analysis_run_record,
     get_fix_plan_for_analysis,
     get_retrieval_results_for_analysis,
@@ -24,7 +25,12 @@ from backend.app.schemas.analysis import (
     PersistedFixPlan,
     PersistedRetrievalResult,
 )
-from backend.app.schemas.architecture import ArchitecturePersistenceUnavailableResponse
+from backend.app.schemas.architecture import (
+    ArchitectureFormat,
+    ArchitectureGraph,
+    ArchitectureSummary,
+    PersistedArchitectureResponse,
+)
 from backend.app.schemas.repository import (
     RepositoryRecordResponse,
     to_repository_metadata_response,
@@ -33,18 +39,27 @@ from backend.app.settings import Settings
 from backend.app.workflows.analyze_repository_workflow import AnalyzeRepositoryWorkflow
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
+ANALYSIS_ID_NOT_FOUND_MESSAGE = (
+    "Analysis run not found. Make sure you are using analysis_run_id, not trace_run_id."
+)
 
 
 @router.get("", response_model=list[AnalysisRunSummary])
 def list_analysis_history(
+    response: Response,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[AnalysisRunSummary]:
-    return [
-        _to_analysis_summary(record)
-        for record in list_analysis_runs(db, limit=limit, offset=offset)
-    ]
+    records = list_analysis_runs(db, limit=limit, offset=offset)
+    response.headers["X-RepoPilot-Limit"] = str(limit)
+    response.headers["X-RepoPilot-Offset"] = str(offset)
+    response.headers["X-RepoPilot-Returned-Count"] = str(len(records))
+    if offset > 0 and not records:
+        response.headers["X-RepoPilot-Hint"] = (
+            "No analysis runs at this offset. Try offset=0 to see the newest runs."
+        )
+    return [_to_analysis_summary(record) for record in records]
 
 
 @router.post("/run", response_model=AnalyzeRepositoryResponse)
@@ -61,6 +76,7 @@ async def run_analysis(
     result = await workflow.run(request)
     return AnalyzeRepositoryResponse(
         run_id=result.run_id,
+        trace_run_id=result.trace_run_id,
         analysis_run_id=result.analysis_run_id,
         repository=to_repository_metadata_response(result.repository),
         scan=result.scan,
@@ -74,15 +90,38 @@ async def run_analysis(
 
 @router.get(
     "/{analysis_run_id}/architecture",
-    response_model=ArchitecturePersistenceUnavailableResponse,
-    status_code=501,
+    response_model=PersistedArchitectureResponse,
 )
 def get_analysis_architecture(
     analysis_run_id: str,
-) -> ArchitecturePersistenceUnavailableResponse:
-    del analysis_run_id
-    return ArchitecturePersistenceUnavailableResponse(
-        message="Architecture graph persistence is not available yet."
+    format: ArchitectureFormat = Query(default=ArchitectureFormat.json),
+    db: Session = Depends(get_db),
+) -> PersistedArchitectureResponse:
+    analysis_run = get_analysis_run_record(db, analysis_run_id)
+    if analysis_run is None:
+        raise HTTPException(status_code=404, detail=ANALYSIS_ID_NOT_FOUND_MESSAGE)
+
+    record = get_architecture_graph_for_analysis(db, analysis_run_id)
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Architecture graph is not available for this analysis run",
+        )
+
+    summary = ArchitectureSummary.model_validate(record.summary_json)
+    if format == ArchitectureFormat.mermaid:
+        return PersistedArchitectureResponse(
+            analysis_run_id=analysis_run_id,
+            framework=record.framework,
+            mermaid=record.mermaid,
+            summary=summary,
+        )
+
+    return PersistedArchitectureResponse(
+        analysis_run_id=analysis_run_id,
+        framework=record.framework,
+        graph=ArchitectureGraph.model_validate(record.graph_json),
+        summary=summary,
     )
 
 
@@ -93,7 +132,7 @@ def get_analysis_run(
 ) -> AnalysisRunDetailResponse:
     record = get_analysis_run_record(db, analysis_run_id)
     if record is None:
-        raise HTTPException(status_code=404, detail="Analysis run not found")
+        raise HTTPException(status_code=404, detail=ANALYSIS_ID_NOT_FOUND_MESSAGE)
     return _to_analysis_detail(
         record,
         retrieval_results=get_retrieval_results_for_analysis(db, analysis_run_id),

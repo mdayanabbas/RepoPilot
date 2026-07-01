@@ -33,6 +33,7 @@ class AnalysisContextSummary(BaseModel):
 
 class AnalyzeRepositoryResult(BaseModel):
     run_id: str
+    trace_run_id: str
     analysis_run_id: str | None = None
     repository: RepositoryMetadata
     scan: ScanResult
@@ -45,6 +46,7 @@ class AnalyzeRepositoryResult(BaseModel):
 
 class AnalyzeRepositoryResponse(BaseModel):
     run_id: str
+    trace_run_id: str
     analysis_run_id: str | None = None
     repository: RepositoryMetadataResponse
     scan: ScanResult
