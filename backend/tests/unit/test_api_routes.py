@@ -1,11 +1,39 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from backend.app.database.base import Base
+from backend.app.dependencies import get_db
 from backend.app.main import app
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def override_test_database() -> None:
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def get_test_db():
+        db: Session = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = get_test_db
+    yield
+    app.dependency_overrides.pop(get_db, None)
 
 
 def test_health_returns_200() -> None:

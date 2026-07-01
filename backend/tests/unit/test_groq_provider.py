@@ -64,6 +64,30 @@ async def test_generate_json_returns_parsed_response() -> None:
 
 
 @pytest.mark.asyncio
+async def test_generate_json_parses_fenced_json_response() -> None:
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": '```json\n{"status": "ok"}\n```',
+                        }
+                    }
+                ],
+                "usage": {},
+            },
+        )
+    )
+
+    async with _client(transport) as client:
+        response = await GroqProvider(_settings(), client=client).generate_json("prompt")
+
+    assert response.content == {"status": "ok"}
+
+
+@pytest.mark.asyncio
 async def test_missing_api_key_raises_provider_error() -> None:
     provider = GroqProvider(_settings(api_key=None))
 

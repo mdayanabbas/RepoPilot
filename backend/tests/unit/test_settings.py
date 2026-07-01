@@ -1,8 +1,11 @@
+import pytest
+
 from backend.app.settings import Settings
 
 
-def test_settings_default_values() -> None:
-    settings = Settings()
+def test_settings_default_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    settings = Settings(_env_file=None)
 
     assert settings.APP_NAME == "RepoPilot"
     assert settings.APP_ENV == "development"
@@ -19,8 +22,11 @@ def test_settings_default_values() -> None:
     assert settings.MAX_CONTEXT_CHARS == 50000
 
 
-def test_supported_frameworks_contains_fastapi_and_flask() -> None:
-    settings = Settings()
+def test_supported_frameworks_contains_fastapi_and_flask(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    settings = Settings(_env_file=None)
 
     assert "fastapi" in settings.SUPPORTED_FRAMEWORKS
     assert "flask" in settings.SUPPORTED_FRAMEWORKS
