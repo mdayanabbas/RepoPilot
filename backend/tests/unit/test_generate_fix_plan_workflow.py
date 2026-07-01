@@ -30,7 +30,7 @@ class FakeLLMService:
     async def generate_json(
         self,
         prompt: str,
-        response_schema: dict | None = None,
+        response_schema: dict[str, Any] | None = None,
     ) -> LLMRouterResponse:
         self.calls.append((prompt, response_schema))
         if self.error is not None:

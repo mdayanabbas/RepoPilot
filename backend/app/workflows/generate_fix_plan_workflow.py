@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 from backend.app.agent.prompt_builder import build_fix_plan_prompt
 from backend.app.agent.schema_validator import validate_fix_plan_payload
@@ -11,7 +11,7 @@ class LLMServiceProtocol(Protocol):
     async def generate_json(
         self,
         prompt: str,
-        response_schema: dict | None = None,
+        response_schema: dict[str, Any] | None = None,
     ) -> LLMRouterResponse: ...
 
 
