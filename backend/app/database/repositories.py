@@ -114,6 +114,64 @@ def get_analysis_run_record(
     return db.get(AnalysisRunRecord, analysis_run_id)
 
 
+def list_analysis_runs(
+    db: Session,
+    *,
+    limit: int = 20,
+    offset: int = 0,
+) -> list[AnalysisRunRecord]:
+    return list(
+        db.scalars(
+            select(AnalysisRunRecord)
+            .order_by(AnalysisRunRecord.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
+
+
+def list_repository_analysis_runs(
+    db: Session,
+    *,
+    repository_id: str,
+    limit: int = 20,
+    offset: int = 0,
+) -> list[AnalysisRunRecord]:
+    return list(
+        db.scalars(
+            select(AnalysisRunRecord)
+            .where(AnalysisRunRecord.repository_id == repository_id)
+            .order_by(AnalysisRunRecord.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
+
+
+def get_fix_plan_for_analysis(
+    db: Session,
+    analysis_run_id: str,
+) -> FixPlanRecord | None:
+    return db.scalar(
+        select(FixPlanRecord)
+        .where(FixPlanRecord.analysis_run_id == analysis_run_id)
+        .order_by(FixPlanRecord.created_at.desc())
+    )
+
+
+def get_retrieval_results_for_analysis(
+    db: Session,
+    analysis_run_id: str,
+) -> list[RetrievalResultRecord]:
+    return list(
+        db.scalars(
+            select(RetrievalResultRecord)
+            .where(RetrievalResultRecord.analysis_run_id == analysis_run_id)
+            .order_by(RetrievalResultRecord.score.desc())
+        )
+    )
+
+
 def create_retrieval_result_records(
     db: Session,
     *,

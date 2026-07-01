@@ -1,9 +1,16 @@
+from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from backend.app.schemas.fix_plan import FixPlan
 from backend.app.schemas.framework import FrameworkDetectionResult
 from backend.app.schemas.intelligence import RouteIndex
-from backend.app.schemas.repository import RepositoryMetadata, RepositorySourceType
+from backend.app.schemas.repository import (
+    RepositoryMetadata,
+    RepositoryRecordResponse,
+    RepositorySourceType,
+)
 from backend.app.schemas.repository import RepositoryMetadataResponse
 from backend.app.schemas.retrieval import RetrievalResult
 from backend.app.schemas.scan import ScanResult
@@ -55,3 +62,49 @@ class AnalysisRunResponse(BaseModel):
     status: str
     detected_framework: str | None = None
     error_message: str | None = None
+
+
+class AnalysisRunSummary(BaseModel):
+    analysis_run_id: str
+    repository_id: str
+    repo_name: str | None = None
+    issue_text: str
+    status: str
+    detected_framework: str | None = None
+    started_at: datetime
+    completed_at: datetime | None = None
+    created_at: datetime
+
+
+class PersistedRetrievalResult(BaseModel):
+    file_path: str
+    score: float = Field(ge=0.0)
+    reason: str
+
+
+class PersistedFixPlan(BaseModel):
+    suspected_issue: str
+    root_cause: str
+    files_to_change: list[dict[str, Any]] = Field(default_factory=list)
+    fix_plan: dict[str, Any] = Field(default_factory=dict)
+    validation_plan: dict[str, Any] = Field(default_factory=dict)
+    confidence: float = Field(ge=0.0, le=1.0)
+    risk_level: str
+    requires_human_review: bool
+    assumptions: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+
+class AnalysisRunDetailResponse(BaseModel):
+    analysis_run_id: str
+    repository_id: str
+    repository: RepositoryRecordResponse | None = None
+    issue_text: str
+    status: str
+    detected_framework: str | None = None
+    error_message: str | None = None
+    retrieval_results: list[PersistedRetrievalResult] = Field(default_factory=list)
+    fix_plan: PersistedFixPlan | None = None
+    started_at: datetime
+    completed_at: datetime | None = None
+    created_at: datetime

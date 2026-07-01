@@ -32,6 +32,15 @@ class RepositoryMetadataResponse(BaseModel):
     total_files: int
 
 
+class RepositoryRecordResponse(BaseModel):
+    repository_id: str
+    repo_name: str
+    repo_url: str | None = None
+    branch: str | None = None
+    framework: str | None = None
+    total_files: int
+
+
 def to_repository_metadata_response(
     metadata: RepositoryMetadata,
 ) -> RepositoryMetadataResponse:
