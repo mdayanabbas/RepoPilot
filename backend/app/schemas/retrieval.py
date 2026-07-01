@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+from backend.app.schemas.git_intelligence import GitHistoryResult
 from backend.app.schemas.framework import SupportedFramework
 from backend.app.schemas.intelligence import (
     PythonFileSymbols,
@@ -16,6 +17,7 @@ class RetrievalInput(BaseModel):
     framework: SupportedFramework
     symbol_index: SymbolIndex = Field(default_factory=SymbolIndex)
     route_index: RouteIndex = Field(default_factory=RouteIndex)
+    git_history: GitHistoryResult | None = None
     top_n: int = Field(default=6, ge=1)
 
 
