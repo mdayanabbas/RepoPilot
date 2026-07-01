@@ -3,6 +3,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from backend.app.schemas.framework import SupportedFramework
+from backend.app.schemas.repository import RepositorySourceType
+
 
 class ArchitectureNodeType(StrEnum):
     file = "file"
@@ -55,3 +58,26 @@ class ArchitectureGraph(BaseModel):
     nodes: list[ArchitectureNode] = Field(default_factory=list)
     edges: list[ArchitectureEdge] = Field(default_factory=list)
     summary: ArchitectureSummary
+
+
+class ArchitectureFormat(StrEnum):
+    json = "json"
+    mermaid = "mermaid"
+
+
+class BuildArchitectureRequest(BaseModel):
+    source_type: RepositorySourceType
+    source: str = Field(min_length=1)
+    branch: str | None = None
+    format: ArchitectureFormat = ArchitectureFormat.json
+
+
+class ArchitectureBuildResponse(BaseModel):
+    framework: SupportedFramework
+    graph: ArchitectureGraph | None = None
+    mermaid: str | None = None
+    summary: ArchitectureSummary
+
+
+class ArchitecturePersistenceUnavailableResponse(BaseModel):
+    message: str
