@@ -1,5 +1,6 @@
 from pathlib import PurePosixPath
 
+from backend.app.retrieval.git_retriever import add_git_signals
 from backend.app.retrieval.import_retriever import add_import_signals
 from backend.app.retrieval.keyword_retriever import add_keyword_signals
 from backend.app.retrieval.route_retriever import add_route_signals
@@ -46,6 +47,7 @@ class RetrievalService:
         add_import_signals(
             retrieval_input.issue_text, retrieval_input.symbol_index, signals
         )
+        add_git_signals(retrieval_input, file_paths, signals)
         candidate_path_set = set(file_paths)
         signals = {
             path: values
