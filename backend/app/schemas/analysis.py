@@ -4,6 +4,7 @@ from backend.app.schemas.fix_plan import FixPlan
 from backend.app.schemas.framework import FrameworkDetectionResult
 from backend.app.schemas.intelligence import RouteIndex
 from backend.app.schemas.repository import RepositoryMetadata, RepositorySourceType
+from backend.app.schemas.repository import RepositoryMetadataResponse
 from backend.app.schemas.retrieval import RetrievalResult
 from backend.app.schemas.scan import ScanResult
 
@@ -25,6 +26,16 @@ class AnalysisContextSummary(BaseModel):
 
 class AnalyzeRepositoryResult(BaseModel):
     repository: RepositoryMetadata
+    scan: ScanResult
+    framework: FrameworkDetectionResult
+    extracted_routes: RouteIndex
+    retrieval: RetrievalResult
+    context_summary: AnalysisContextSummary
+    fix_plan: FixPlan | None = None
+
+
+class AnalyzeRepositoryResponse(BaseModel):
+    repository: RepositoryMetadataResponse
     scan: ScanResult
     framework: FrameworkDetectionResult
     extracted_routes: RouteIndex

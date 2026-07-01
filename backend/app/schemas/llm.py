@@ -30,3 +30,19 @@ class LLMRouterResponse(BaseModel):
     provider_used: str
     response: LLMResponse
     attempts: list[LLMProviderAttempt] = Field(default_factory=list)
+
+
+class LLMProvidersResponse(BaseModel):
+    primary_provider: str
+    fallback_provider: str
+    supported_providers: list[str]
+
+
+class LLMTestRequest(BaseModel):
+    prompt: str = Field(min_length=1)
+
+
+class LLMTestResponse(BaseModel):
+    provider_used: str
+    attempts: list[LLMProviderAttempt]
+    content: dict[str, Any]
