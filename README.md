@@ -4,6 +4,12 @@ Local-first AI debugging agent for backend repositories.
 
 RepoPilot analyzes a local or Git-backed Python backend, detects the framework, extracts routes and code structure, retrieves relevant files for an issue, and asks an LLM for a structured fix plan. Phase 1 focuses on FastAPI and Flask projects.
 
+## Current Archotecture Diagram
+
+<img width="2636" height="2564" alt="repo" src="https://github.com/user-attachments/assets/8ae0462c-69aa-4d86-9071-1d5f291426e9" />
+
+
+
 ## Current Scope
 
 RepoPilot currently supports:
